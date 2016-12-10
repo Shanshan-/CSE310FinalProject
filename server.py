@@ -37,6 +37,7 @@ class listenThread (threading.Thread):
                 #check if from server socket connection
                 if conn == self.sock:
                     connectionSocket, addr = self.sock.accept()
+                    print "Connection request from ", addr, "."
                     _thread = commThread(connectionSocket, addr);
                     _thread.start()
                     self.threads.append(_thread)
@@ -48,8 +49,11 @@ class listenThread (threading.Thread):
                     running = handleTermInput(stdInput)
 
         #quit has been called; close the server
+        print "Closing down the server..."
+        self.sock.close()
         for t in self.threads:
-            t.join();
+            t.join()
+        sys.exit()
 
 class commThread (threading.Thread):
     def __init__(self, connectionSocket, addr):
@@ -58,9 +62,13 @@ class commThread (threading.Thread):
         self.addr = addr
 
     def run(self):
+        print "Connection to ", self.addr, " successful."
         message = self.connectionSocket.recv(1024)
         response = handleCommInput(message)
         self.connectionSocket.send(response)
+
+    def shutdown(self):
+        self.connectionSocket.send("Server shutdown")
         self.connectionSocket.close()
 
 """FUNCTIONS"""
@@ -69,10 +77,13 @@ def handleTermInput(string):
     #if user requests to quit
     if string == "quit":
         return False
-
+    elif string == "help":
+        print ("Available commands:\n"
+                "  help\t\tBring up this menu\n"
+                "  quit\t\tQuits the program\n")
     else:
-        print string
-        return True
+        print string + " is not a valid command.  Type help for assistance."
+    return True
 
 #handle any communication from the socket; message to send back to client is returned
 def handleCommInput(string):
@@ -80,7 +91,6 @@ def handleCommInput(string):
     return response
 
 """CODE STARTS HERE"""
-print "Type quit to exit server program"
-thread = listenThread("127.0.0.1", 4000)
+thread = listenThread("127.0.0.1", 4001)
 thread.startSocket()
 thread.start()
