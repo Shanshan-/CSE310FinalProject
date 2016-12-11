@@ -37,7 +37,7 @@ class listenThread (threading.Thread):
                 #check if from server socket connection
                 if conn == self.sock:
                     connectionSocket, addr = self.sock.accept()
-                    print "Connection request from ", addr
+                    safeWrite("Connection request from " + str(addr))
                     _thread = commThread(connectionSocket, addr);
                     _thread.start()
                     self.threads.append(_thread)
@@ -54,7 +54,6 @@ class listenThread (threading.Thread):
         for t in self.threads:
             t.join()
         sys.exit()
-        return
 
 class commThread (threading.Thread):
     def __init__(self, connectionSocket, addr):
@@ -63,16 +62,33 @@ class commThread (threading.Thread):
         self.addr = addr
 
     def run(self):
-        print "Connection to ", self.addr, " successful"
-        message = self.connectionSocket.recv(1024)
-        response = handleCommInput(message)
-        self.connectionSocket.send(response)
+        safeWrite("Connection to " + str(self.addr) + " successful")
+        running = True
+        while running:
+            message = self.connectionSocket.recv(1024)
+            safeWrite("Received message \"" + message + "\" from " + str(self.addr))
+            if message == "end connection":
+                self.shutdown()
+                running = False
+            response = handleCommInput(message)
+            self.connectionSocket.send(response)
+            safeWrite("Sending message \"" + response + "\" to " + str(self.addr))
+        return
 
     def shutdown(self):
         self.connectionSocket.send("Server shutdown")
         self.connectionSocket.close()
+        return
 
 """FUNCTIONS"""
+#thread-locked writing function (use when printing to the terminal)
+def safeWrite(str):
+    #TODO: check if needed for terminal i/o
+    writeLock.acquire()
+    print str
+    writeLock.release()
+    return
+
 #handle any terminal commands
 def handleTermInput(string):
     #if user requests to quit
@@ -94,4 +110,5 @@ def handleCommInput(string):
 """CODE STARTS HERE"""
 thread = listenThread("127.0.0.1", 4001)
 thread.startSocket()
+writeLock = threading.Lock()
 thread.start()
