@@ -26,7 +26,7 @@ class listenThread (threading.Thread):
             sys.exit(1)
 
     def run(self):
-        print "The server is ready to receive"
+        print "The server is ready to receive connections"
         mask = [self.sock, sys.stdin] # create a mask for multiplexing
 
         running = True
@@ -37,7 +37,7 @@ class listenThread (threading.Thread):
                 #check if from server socket connection
                 if conn == self.sock:
                     connectionSocket, addr = self.sock.accept()
-                    print "Connection request from ", addr, "."
+                    print "Connection request from ", addr
                     _thread = commThread(connectionSocket, addr);
                     _thread.start()
                     self.threads.append(_thread)
@@ -54,6 +54,7 @@ class listenThread (threading.Thread):
         for t in self.threads:
             t.join()
         sys.exit()
+        return
 
 class commThread (threading.Thread):
     def __init__(self, connectionSocket, addr):
@@ -62,7 +63,7 @@ class commThread (threading.Thread):
         self.addr = addr
 
     def run(self):
-        print "Connection to ", self.addr, " successful."
+        print "Connection to ", self.addr, " successful"
         message = self.connectionSocket.recv(1024)
         response = handleCommInput(message)
         self.connectionSocket.send(response)

@@ -50,6 +50,7 @@ class commThread (threading.Thread):
 
         #quit requested
         self.sock.close()
+        return
 
 
 """FUNCTIONS"""
