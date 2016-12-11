@@ -104,7 +104,7 @@ def handleTermInput(string):
 
 #handle any communication from the socket; message to send back to client is returned
 def handleCommInput(string):
-    response = string + "; Testing Testing 123"
+    response = string + "- Testing"
     return response
 
 """CODE STARTS HERE"""
