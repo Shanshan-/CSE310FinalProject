@@ -11,8 +11,9 @@ class commThread (threading.Thread):
         self.server = servername
         self.port = port
         self.sock = None
-        self.threads = []
         self.recvLength = 1024
+        self.threads = []
+        
 
     #open up the client socket to communicate with server
     def startSocket(self):

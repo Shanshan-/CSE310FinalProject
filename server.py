@@ -34,7 +34,7 @@ class listenThread (threading.Thread):
             inputready, outputready, exceptready = select.select(mask, [], []) # begin multiplexing on socket and stdin
             for conn in inputready:
 
-                #check if from server socket connection
+                #check if from the server socket connection
                 if conn == self.sock:
                     connectionSocket, addr = self.sock.accept()
                     safeWrite("Connection request from " + str(addr))
