@@ -87,17 +87,23 @@ def _print(next, n, mode, data, new = []):
 def _ag(data, n, conn):
 	while 1:
 		cmd = raw_input()
+		cmds = cmd.split()
 		if cmd == 'q':
 			#quit from ag command mode
 			print 'Quitting from ag mode\n'
 			break
+		elif cmd == "help":
+			print ("Available commands:\n"
+				   "  s <num>\tSubscribe to group number <num>\n"
+				   "  u <num>\tUnsubscribe from group number <num>\n"
+				   "  n\tList the next %d posts, and quits once all posts have been displayed\n"
+				   "  q\tQuit from rg mode" % n)
 			
 		elif cmd == 'n':
 			# Print the next n line
 			_print(True, n, 'ag', data)
 		
-		else:
-			cmds = cmd.split()
+		elif cmds == "s" or cmds == "u":
 			if len(cmds) >= 2 and cmds[0] == 's':
 				# If all argument are integers, insert indicated groups into user history
 				if check_int_args:
@@ -119,22 +125,31 @@ def _ag(data, n, conn):
 						if k < len(data) and k >= 0:
 							cur.execute('delete from group_subs where id = ?', (data[k][0],))
 					conn.commit()
+			else:
+				print "Invalid number of arguments for the s and u commands"
+		else:
+			print cmd + " is not a valid command.  Enter help for a list of valid commands."
 
 # sg sub-commands handlers		
 # data is an array of (groupId, groupName, new_num_posts)		
 def _sg(data, n, conn):
 	while 1:
 		cmd = raw_input()
+		cmds = cmd.split()
 		if cmd == 'q':
 			#quit from ag command mode
 			print 'Quitting from sg mode\n'
-			break		
+			break
+		elif cmd == "help":
+			print ("Available commands:\n"
+				   "  u <num>\tUnsubscribe from group number <num>\n"
+				   "  n\tList the next %d posts, and quits once all posts have been displayed\n"
+				   "  q\tQuit from rg mode" % n)
 		elif cmd == 'n':
-			# Print the next n line
+			# Print the next n lines
 			_print(True, n, 'sg', data)
-		else:
-			cmds = cmd.split()
-			if len(cmds) >= 2 and cmds[0] == 'u':
+		elif cmds[0] == 'u':
+			if len(cmds) >= 2:
 				# If all argument are integers, delete indicated groups from user history
 				if check_int_args:
 					cur = conn.cursor()
@@ -142,7 +157,11 @@ def _sg(data, n, conn):
 						k = len(data) - int(cmds[i-1])
 						if k < len(data) and k >= 0:
 							cur.execute('delete from group_subs where id = ?', (data[k][0]))
-					conn.commit()	
+					conn.commit()
+			else:
+				print "Invalid number of arguments for the u command"
+		else:
+			print cmd + " is not a valid command.  Enter help for a list of valid commands."
 		
 # Handling n subcommand of rg mode
 def _rgn(gname, data, n, sock):
@@ -161,11 +180,23 @@ def _rgn(gname, data, n, sock):
 def _rg(gname, data, n, conn, sock, userid):
 	while 1:
 		cmd = raw_input()
+		cmds = cmd.split()
 		#quit from ag command mode
 		if cmd == 'q':		
 			print 'Quitting from rg mode\n'
 			break
-		
+
+		elif cmd == "help":
+			print ("Available commands:\n"
+				   "  <id>\t\tDisplays detail about the post in the displayed list with number <id>\n"
+				   "    n\t\tDisplay %d more lines of the post content\n"
+				   "    q\t\tQuit displaying the post content\n"
+				   "  r [<num>|<range>]\tMarks either post number <num> as read, or all posts within\n"
+				   "\t\t\t\t  <range> as read. <range> must be of the format #-#\n"
+				   "  n\t\tList the next %d posts, and quits once all posts have been displayed\n"
+				   "  p\t\tSubmit a post to the group\n"
+				   "  q\t\tQuit from rg mode" % (n, n))
+
 		# n sub-command
 		elif cmd == 'n':
 			_rgn(gname, data, n, sock)
@@ -213,9 +244,8 @@ def _rg(gname, data, n, conn, sock, userid):
 					break
 		
 		# r sub-command
-		else:
-			cmds = cmd.split()
-			if len(cmds) >= 2 and cmds[0] == 'r':
+		elif cmds[0] == "r":
+			if len(cmds) >= 2:
 				# If all argument are integers, insert indicated groups into user history
 				if check_int_args:
 					cur = conn.cursor()
@@ -232,6 +262,12 @@ def _rg(gname, data, n, conn, sock, userid):
 								(post_read, gname,))
 					# Saving the changes
 					conn.commit()
+					#TODO: support range for r command
+			else:
+				print "Invalid number of arguments for the r command"
+
+		else:
+			print cmd + " is not a valid command.  Enter help for a list of valid commands."
 										
 ### MAIN FUNCTION FOR HANDLING LOGIN ###
 
@@ -261,9 +297,17 @@ def _login(userid):
 			clientSocket.close()
 			conn.close()
 			sys.exit()
-			
+		elif cmd == "help":
+			print ("Available commands:\n"
+					"  ag <N>\t\tList all groups, optional <N> denotes number of groups to show at once\n"
+					"  sg <N>\t\tList all subscribed groups, optional <N> denotes number of groups to show at once\n"
+					"  rg <name>\tGet more information about subscribed group <name>\n"
+					"  help\tDisplays this menu\n"
+					"  logout\tLogout")
+
+		cmd2 = cmd
 		cmd = cmd.split()
-		
+
 		### HANDLING AG MODE ###
 		
 		if len(cmd) <= 2 and cmd[0] == 'ag':
@@ -299,7 +343,7 @@ def _login(userid):
 		
 		### HANDLING SG MODE ###
 		
-		if len(cmd) <= 2 and cmd[0] == 'sg':
+		elif len(cmd) <= 2 and cmd[0] == 'sg':
 			N = 5 							# DEFAULT N argument
 			if len(cmd) == 2 and isInt(cmd[1]): 
 				N = int(cmd[1])
@@ -315,6 +359,8 @@ def _login(userid):
 			dataSG = _readData(clientSocket, 4096, '\n')
 			if dataSG[0] != '200 OK':	
 				print 'Problem from the server'
+			elif len(dataSG) == 2:
+				print "There are no subscribed groups to display"
 			else:
 				dataSG.pop(0)
 				for line in dataSG:
@@ -331,7 +377,7 @@ def _login(userid):
 			_sg(data, N, conn)
 				
 		## HANDLING RG MODE
-		if len(cmd) >= 2 and len(cmd) <= 3 and cmd[0] == 'rg':
+		elif len(cmd) >= 2 and len(cmd) <= 3 and cmd[0] == 'rg':
 			N = 5
 			gname = cmd[1]
 			# Check if gname is a subscribed group
@@ -366,17 +412,30 @@ def _login(userid):
 			_print(False, N, 'rg', data)	
 			_rg(gname, data, N, conn, clientSocket, userid)
 
-# To be updated: just instruct users how to use the commands			
+		# print error message
+		else:
+			print cmd2 + " is not a valid command.  Enter help for a list of available commands"
+
+# Instruct users how to use the commands
 def _help():
-	print 'help'
+	print ("Available commands:\n"
+			"  login <name>\tLogin with username <name>\n"
+		    "  logout\tQuit the program")
 
 # Main
 clientSocket = 0
+print ("This is a test: %d\n"
+	   "Tester line 2: %d"% (clientSocket, clientSocket + 1))
 while 1:
 	cmdLogin = raw_input()
+	tmp = cmdLogin.split()
 	if cmdLogin == 'help':
-		_help();
-	cmdLogin = cmdLogin.split()
-	if len(cmdLogin) == 2 and cmdLogin[0] == 'login':
-		_login(cmdLogin[1]);
+		_help()
+	elif cmdLogin == "logout":
+		break
+	elif len(tmp) == 2 and tmp[0] == 'login':
+		_login(tmp[1])
+	else:
+		print cmdLogin + " is not a valid command.  Enter help for a list of available commands"
+
 	
