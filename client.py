@@ -39,9 +39,7 @@ class commThread (threading.Thread):
                 #check if from server socket connection
                 if conn == self.sock:
                     message = self.sock.recv(self.recvLength)
-                    response, running = handleCommInput(message)
-                    if response != "":
-                        self.sock.send(response)
+                    running = handleCommInput(message, self.sock)
 
                 #check if from stdin input
                 elif conn == sys.stdin:
@@ -50,14 +48,20 @@ class commThread (threading.Thread):
                     running = handleTermInput(stdInput, self.sock)
 
         #quit requested
+        print "Ending connection. Goodbye."
         self.sock.close()
-        return
+        sys.exit()
 
 
 """FUNCTIONS"""
 #handle any terminal commands
-def handleTermInput(string, commSock):
+def handleTermInput(string, serverSock):
     if string == "quit": #quit
+        serverSock.send("Bye")
+        str = serverSock.recv(1024)
+        if str != "Bye":
+            print "Incorrect message from server: " + str
+        serverSock.send("Bye")
         return False
     elif string == "help": #help
         print ("Available commands:\n"
@@ -68,18 +72,24 @@ def handleTermInput(string, commSock):
         tmp = string.split("\"")
         if len(tmp) == 1:
             print "Please enclose the message to be sent in quotation marks"
+        if len(tmp) == 2:
+            print "Please finish quotation marks"
         else:
-            commSock.send(tmp[1])
+            serverSock.send(tmp[1])
     else:
         print string + " is not a valid command.  Type help for assistance."
     return True
 
 #handle any communication from the socket; message to send back to client is returned
-def handleCommInput(string):
-    if string == "server Shutdown":
-        return "", False
+def handleCommInput(string, serverSock):
+    if string == "Bye":
+        serverSock.send("Bye")
+        str = serverSock.recv(1024)
+        if str != "Bye":
+            print "Incorrect message from server: " + str
+        return False
     print "From Server: " + string
-    return "", True
+    return True #keep running
 
 """CODE STARTS HERE"""
 thread = commThread("127.0.0.1", 4001)

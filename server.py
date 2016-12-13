@@ -38,9 +38,9 @@ class listenThread (threading.Thread):
                 if conn == self.sock:
                     connectionSocket, addr = self.sock.accept()
                     safeWrite("Connection request from " + str(addr))
-                    _thread = commThread(connectionSocket, addr);
-                    _thread.start()
+                    _thread = commThread(connectionSocket, addr)
                     self.threads.append(_thread)
+                    _thread.start()
 
                 #check if from stdin input
                 elif conn == sys.stdin:
@@ -52,6 +52,10 @@ class listenThread (threading.Thread):
         print "Closing down the server..."
         self.sock.close()
         for t in self.threads:
+            try:
+                t.shutdown()
+            except:
+                pass
             t.join()
         sys.exit()
 
@@ -66,17 +70,17 @@ class commThread (threading.Thread):
         running = True
         while running:
             message = self.connectionSocket.recv(1024)
-            safeWrite("Received message \"" + message + "\" from " + str(self.addr))
-            if message == "end connection":
-                self.shutdown()
-                running = False
-            response = handleCommInput(message)
-            self.connectionSocket.send(response)
-            safeWrite("Sending message \"" + response + "\" to " + str(self.addr))
+            running = handleCommInput(message, self.connectionSocket, str(self.addr))
+        self.shutdown()
         return
 
     def shutdown(self):
-        self.connectionSocket.send("Server shutdown")
+        safeWrite("Closing connection from " + str(self.addr))
+        self.connectionSocket.send("Bye")
+        string = self.connectionSocket.recv(1024)
+        if string != "Bye" and string != "":
+            safeWrite("Incorrect response from client: " + string)
+        self.connectionSocket.send("Bye")
         self.connectionSocket.close()
         return
 
@@ -103,12 +107,19 @@ def handleTermInput(string):
     return True
 
 #handle any communication from the socket; message to send back to client is returned
-def handleCommInput(string):
-    response = string + " - Testing"
-    return response
+def handleCommInput(string, clientSock, addr):
+    safeWrite("Received message \"" + string + "\" from " + addr)
+    if string == "Bye":
+        return False
+    else:
+        response = string + " - Testing"
+        clientSock.send(response)
+        safeWrite("Sending message \"" + response + "\" to " + addr)
+    return True
 
 """CODE STARTS HERE"""
 thread = listenThread("127.0.0.1", 4001)
 thread.startSocket()
 writeLock = threading.Lock()
 thread.start()
+thread.join()
